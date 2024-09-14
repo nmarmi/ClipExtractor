@@ -3,9 +3,9 @@
 import os
 from pathlib import Path
 import cv2
-import numpy as np
 
-def extract_frames(video_path: Path, output_dir=None: Path):
+def extract_frames(video_path: Path, output_dir: Path):
+    """extract frames from video"""
     # Open the video file
     cap = cv2.VideoCapture(video_path)
 
@@ -25,22 +25,13 @@ def extract_frames(video_path: Path, output_dir=None: Path):
     frame_list = []  # List to store frames if saving to memory
     frame_count = 0  # Frame counter
 
-    # Read a frame from the video
+    # Read first frame from the video
     success, frame = cap.read()
 
     while success:
-
-        # Optionally save the frame as an image file
-        if output_dir:
-            frame_filename = os.path.join(output_dir, f"frame_{frame_count:04d}.jpg")
-            cv2.imwrite(frame_filename, frame)
-            print(f"Saved {frame_filename}")
-
-        # Optionally store the frame in memory as a NumPy array
+        # Store the frame in memory as a NumPy array
         frame_list.append(frame)
-
         frame_count += 1
-
         success, frame = cap.read()
 
     # close video file
