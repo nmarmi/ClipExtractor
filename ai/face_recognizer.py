@@ -1,5 +1,6 @@
 """Handle face recognizing"""
 import os
+from pythonlangutil.overload import Overload, signature
 from pathlib import Path
 import face_recognition
 import numpy as np
@@ -17,23 +18,23 @@ class FaceDetector():
 
     def __init__(self, known_faces: list[np.ndarray] = []):
         self.known_faces = known_faces
-
-    def get_known_faces(self):
-        """Returns known face encodings"""
-        return self.known_faces
     
-    def set_known_faces(self, face_encodings: list[np.ndarray]):
-        """sets known faces to given encodings"""
-        self.known_faces = face_encodings
+    @Overload
+    @signature("list")
+    def train(self, face_encodings: list[np.ndarray]):
+        """add provided faces encoding to known face encodings"""
+        self.known_faces.append(face_encodings)
 
-
+    @train.Overload
+    @signature("Path")
     def train(self, faces_dir: Path):
         """
-        Train model with knwon faces
+        Extract face encodings from images directory and add to known face encodings
         
         Args:
             faces_dir (Path): directory with training images
         """
+        print("training model from images")
         if not faces_dir.is_dir():
             raise NotADirectoryError(f"path {faces_dir} is not a directory")
 
@@ -48,7 +49,10 @@ class FaceDetector():
                 if encodings:
                     print(f"Extracted encodings from {filename}")
                     self.known_faces.append(encodings)
-
+    
+    def get_known_faces(self):
+        """Returns known face encodings"""
+        return self.known_faces
 
     def detect_faces(self, frame: np.ndarray):
         """
@@ -86,7 +90,7 @@ class FaceDetector():
 
     def get_timestamps(self, frame_list: list[np.ndarray]) -> set[int]:
         """    
-        Iterate through frames and save frames where knwon face is detected
+        Iterate through frames and save frames where known face is detected
 
         Args:
             frame_list (list[np.ndarrat]): List of frames (NumPy arrays) extracted from the video.
@@ -94,6 +98,8 @@ class FaceDetector():
         Returns:
             set[int]: A set of timestamps (frame indices) where known faces were detected.
         """
+        if not self.known_faces:
+            raise NoKnownFaceEncodingsError()
         timestamps = set()
         for frame_index, frame in enumerate(frame_list):
             face_encodings = self.detect_faces(frame)
@@ -103,3 +109,46 @@ class FaceDetector():
                     timestamps.add(frame_index)
         
         return timestamps
+
+#################################################################
+
+    @Overload
+    @signature("Path", "list")
+    def execute(self, train_faces_dir: Path, frame_list: list[np.ndarray]) -> list[int]:
+        """Execute pipleine: train model on faces from images directory, and identify frames with known faces
+        Args:
+            train_faces_dir (Path): Directory with training images
+            frame_list (list[np.ndarrat]): List of frames (NumPy arrays) extracted from the video.
+        
+        Returns:
+            set[int]: A set of timestamps (frame indices) where known faces were detected.
+        """
+        self.train(train_faces_dir)
+        print("extracting timestamps")
+        return self.get_timestamps(frame_list)
+
+    @execute.Overload
+    @signature("list")
+    def execute(self, frame_list: list[np.ndarray]) -> list[int]:
+        """Execute pipleine with model pretrained on known faces, and identify frames with known faces
+        Args:
+            frame_list (list[np.ndarrat]): List of frames (NumPy arrays) extracted from the video.
+        
+        Returns:
+            set[int]: A set of timestamps (frame indices) where known faces were detected.
+        """
+        return self.get_timestamps(frame_list)
+    
+    @execute.Overload
+    @signature("list", "list")
+    def execute(self, known_face_encodings: list[np.ndarray], frame_list: list[np.ndarray]) -> list[int]:
+        """Execute pipleine: add known face encodings to known faces, and identify frames with known faces
+        Args:
+            known_face_encodings (list[np.ndarray]): list of face encodigs
+            frame_list (list[np.ndarrat]): List of frames (NumPy arrays) extracted from the video.
+        
+        Returns:
+            set[int]: A set of timestamps (frame indices) where known faces were detected.
+        """
+        self.train(known_face_encodings)
+        return self.get_timestamps(frame_list)
