@@ -1,5 +1,6 @@
-import face_recognition
+"""Handle face recognizing"""
 import os
+import face_recognition
 
 
 def generate_face_encodings(images_dir) -> list:

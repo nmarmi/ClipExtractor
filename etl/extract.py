@@ -1,10 +1,8 @@
 """Extract audio and frames from video"""
-
-import os
 from pathlib import Path
 import cv2
 
-def extract_frames(video_path: Path, output_dir: Path):
+def extract_frames(video_path: Path):
     """extract frames from video"""
     # Open the video file
     cap = cv2.VideoCapture(video_path)
@@ -18,10 +16,6 @@ def extract_frames(video_path: Path, output_dir: Path):
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     print(f"Total frames in the video: {total_frames}")
 
-    # Create a directory to save frames if an output directory is specified
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-
     frame_list = []  # List to store frames if saving to memory
     frame_count = 0  # Frame counter
 
@@ -29,6 +23,7 @@ def extract_frames(video_path: Path, output_dir: Path):
     success, frame = cap.read()
 
     while success:
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # Store the frame in memory as a NumPy array
         frame_list.append(frame)
         frame_count += 1
@@ -41,4 +36,3 @@ def extract_frames(video_path: Path, output_dir: Path):
 
     # Return the list of frames if stored in memory
     return frame_list
-
