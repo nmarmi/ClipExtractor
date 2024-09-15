@@ -1,9 +1,8 @@
 """Handle face recognizing"""
 import os
-from pathlib import Path
+from pathlib import Path, PosixPath, WindowsPath
 import face_recognition
 import numpy as np
-
 
 class NoKnownFaceEncodingsError(Exception):
     """Exception raised when no known face encodings are provided."""
@@ -83,7 +82,7 @@ class FaceDetector():
                 return True
         return False
 
-    def get_timestamps(self, frame_list: list[np.ndarray]) -> set[int]:
+    def get_timestamps(self, frame_list: list[np.ndarray], frame_interval: int) -> set[int]:
         """    
         Iterate through frames and save frames where known face is detected
 
@@ -97,80 +96,92 @@ class FaceDetector():
             raise NoKnownFaceEncodingsError()
         timestamps = set()
         for frame_index, frame in enumerate(frame_list):
-            face_encodings = self.detect_faces(frame)
-            # compare each detected face encoding to known faces
-            for face_encoding in face_encodings:
-                if self.known_face_detected(face_encoding):
-                    timestamps.add(frame_index)
+            if frame_index%frame_interval == 0:
+                face_encodings = self.detect_faces(frame)
+                # compare each detected face encoding to known faces
+                for face_encoding in face_encodings:
+                    if self.known_face_detected(face_encoding):
+                        timestamps.add(frame_index)
 
         return timestamps
 
 #################################################################
 
-    def execute_with_images(self, train_faces_dir: Path, frame_list: list[np.ndarray]) -> list[int]:
+    def execute_with_images(self, train_faces_dir: Path, frame_list: list[np.ndarray], frame_interval: int) -> list[int]:
         """
         Train model on faces from images directory, and identify frames with known faces
         Args:
             train_faces_dir (Path): Directory with training images
             frame_list (list[np.ndarrat]): List of frames (NumPy arrays) extracted from the video.
+            frame_interval (int): frames interval to process
         
         Returns:
             set[int]: A set of timestamps (frame indices) where known faces were detected.
         """
         self.train_from_images(train_faces_dir)
         print("extracting timestamps")
-        return self.get_timestamps(frame_list)
+        return self.get_timestamps(frame_list, frame_interval)
 
 
-    def execute_pretrained(self, frame_list: list[np.ndarray]) -> list[int]:
+    def execute_pretrained(self, frame_list: list[np.ndarray], frame_interval: int) -> list[int]:
         """
         Execute pipleine with model pretrained on known faces, and identify frames with known faces
         Args:
             frame_list (list[np.ndarrat]): List of frames (NumPy arrays) extracted from the video.
+            frame_interval (int): frames interval to process
         
         Returns:
             set[int]: A set of timestamps (frame indices) where known faces were detected.
         """
-        return self.get_timestamps(frame_list)
+        return self.get_timestamps(frame_list, frame_interval)
 
     def execute_with_encodings(
             self,
             known_face_encodings: list[np.ndarray],
-            frame_list: list[np.ndarray]
+            frame_list: list[np.ndarray],
+            frame_interval: int
         ) -> list[int]:
         """
         Add known face encodings to known faces, and identify frames with known faces
         Args:
             known_face_encodings (list[np.ndarray]): list of face encodigs
             frame_list (list[np.ndarrat]): List of frames (NumPy arrays) extracted from the video.
+            frame_interval (int): frames interval to process
         
         Returns:
             set[int]: A set of timestamps (frame indices) where known faces were detected.
         """
         self.train_from_encodings(known_face_encodings)
-        return self.get_timestamps(frame_list)
+        return self.get_timestamps(frame_list, frame_interval)
 
-    def execute(self, *args) -> list[int]:
+    def execute(self, *args, **kwargs) -> list[int]:
         """
         Execute the pipeline based on provided arguments.
         
         Arguments:
-            - (Path, list[np.ndarray]): Directory with training images and frames list.
-            - (list[np.ndarray], list[np.ndarray]): Known face encodings and frames list.
-            - (list[np.ndarray],): List of frames (NumPy arrays) extracted from the video.
+            - (images_dir: Path, frames: list[np.ndarray]): Directory with training images and frames list.
+            - (known_encodings: list[np.ndarray], frames: list[np.ndarray]): Known face encodings and frames list.
+            - (frames: list[np.ndarray],): List of frames (NumPy arrays) extracted from the video.
+        
+        Optional Keyword Arguments:
+            - frame_interval (int): Frames interval to process. Default is 10 (process every 10th frame)
 
         Returns:
             list[int]: A list of timestamps (frame indices) where known faces were detected.
         """
-        signature = tuple(arg.__class__ for arg in args)
+        signature = tuple(
+            Path if isinstance(arg, (PosixPath, WindowsPath)) else arg.__class__
+            for arg in args
+        )
         typemap = {
             (Path, list): self.execute_with_images,
             (list, list): self.execute_with_encodings,
             (list, ): self.execute_pretrained
         }
         if signature in typemap:
-            return(typemap[signature](*args))
+            frame_interval = kwargs.get('frame_interval', 10)
+            return(typemap[signature](*args, frame_interval))
         else:
-            raise TypeError(f"Invalid type signature: {signature}. Accepted signatures are:
-                            Path, list), (list, list), or (list),")
+            raise TypeError(f"Invalid type signature: {signature}. Accepted signatures are: Path, list), (list, list), or (list)." 
+                            "Optional keyword argument 'frame_interval' (int) is also supported.")
 
