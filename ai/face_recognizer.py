@@ -1,8 +1,11 @@
 """Handle face recognizing"""
 import os
+import logging
 from pathlib import Path, PosixPath, WindowsPath
 import face_recognition
 import numpy as np
+
+logger = logging.getLogger()
 
 class NoKnownFaceEncodingsError(Exception):
     """Exception raised when no known face encodings are provided."""
@@ -17,18 +20,20 @@ class FaceDetector():
     def __init__(self, known_faces: list[np.ndarray] = []):
         self.known_faces = known_faces
 
-    def train_from_encodings(self, face_encodings: list[np.ndarray]):
+    def train_from_encodings(self, face_encodings: list[np.ndarray]) -> None:
         """add provided faces encoding to known face encodings"""
         self.known_faces.append(face_encodings)
+        logger.info(f"Added {len(face_encodings)} encodings to model")
 
-    def train_from_images(self, faces_dir: Path):
+    def train_from_images(self, faces_dir: Path) -> None:
         """
         Extract face encodings from images directory and add to known face encodings
         
         Args:
             faces_dir (Path): directory with training images
         """
-        print("training model from images")
+        logger.info(f"Extracting encodings from {faces_dir}")
+        init_encodings = len(self.known_faces)
         if not faces_dir.is_dir():
             raise NotADirectoryError(f"path {faces_dir} is not a directory")
 
@@ -41,8 +46,8 @@ class FaceDetector():
                 encodings = face_recognition.face_encodings(image)
 
                 if encodings:
-                    print(f"Extracted encodings from {filename}")
                     self.known_faces.append(encodings)
+        logger.info(f"Extracted {len(self.known_faces) - init_encodings} encodings from {faces_dir}")
 
     def get_known_faces(self):
         """Returns known face encodings"""
@@ -62,8 +67,7 @@ class FaceDetector():
 
         return face_encodings
 
-
-    def known_face_detected(self, detected_face_encoding):
+    def known_face_detected(self, detected_face_encoding: np.ndarray) -> bool:
         """
         Compare known face encodings to a single face encoding detected in a frame
 
@@ -94,6 +98,7 @@ class FaceDetector():
         """
         if not self.known_faces:
             raise NoKnownFaceEncodingsError()
+        logger.info("Extracting timestamps")
         timestamps = set()
         for frame_index, frame in enumerate(frame_list):
             if frame_index%frame_interval == 0:
@@ -119,7 +124,6 @@ class FaceDetector():
             set[int]: A set of timestamps (frame indices) where known faces were detected.
         """
         self.train_from_images(train_faces_dir)
-        print("extracting timestamps")
         return self.get_timestamps(frame_list, frame_interval)
 
 
@@ -169,6 +173,7 @@ class FaceDetector():
         Returns:
             list[int]: A list of timestamps (frame indices) where known faces were detected.
         """
+        logger.info("Starting face detection execution")
         signature = tuple(
             Path if isinstance(arg, (PosixPath, WindowsPath)) else arg.__class__
             for arg in args
