@@ -1,6 +1,9 @@
 """Extract audio and frames from video"""
+import logging
 from pathlib import Path
 import cv2
+
+logger = logging.getLogger()
 
 def extract_frames(video_path: Path):
     """extract frames from video"""
@@ -14,7 +17,7 @@ def extract_frames(video_path: Path):
 
     # Get the total number of frames in the video
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print(f"Total frames in the video: {total_frames}")
+    logger.info(f"Total frames in the video: {total_frames}")
 
     frame_list = []  # List to store frames if saving to memory
     frame_count = 0  # Frame counter
@@ -32,7 +35,7 @@ def extract_frames(video_path: Path):
     # close video file
     cap.release()
 
-    print(f"Extracted {frame_count} frames from the video.")
+    logger.info(f"Extracted {frame_count} frames from the video.")
 
     # Return the list of frames if stored in memory
     return frame_list
