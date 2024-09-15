@@ -162,25 +162,15 @@ class FaceDetector():
         Returns:
             list[int]: A list of timestamps (frame indices) where known faces were detected.
         """
+        signature = tuple(arg.__class__ for arg in args)
+        typemap = {
+            (Path, list): self.execute_with_images,
+            (list, list): self.execute_with_encodings,
+            (list, ): self.execute_pretrained
+        }
+        if signature in typemap:
+            return(typemap[signature](*args))
+        else:
+            raise TypeError(f"Invalid type signature: {signature}. Accepted signatures are:
+                            Path, list), (list, list), or (list),")
 
-        # Case 1: (Path, list[np.ndarray]) - Train on directory and process frames
-        if len(args) == 2 and isinstance(args[0], Path) and isinstance(args[1], list):
-            train_faces_dir = args[0]
-            frame_list = args[1]
-            self.execute_with_images(train_faces_dir, frame_list)
-
-        # Case 2: (list[np.ndarray], list[np.ndarray]) - Add known encodings and process frames
-        elif len(args) == 2 and all(isinstance(arg, list) for arg in args):
-            known_face_encodings = args[0]
-            frame_list = args[1]
-            return self.execute_with_encodings(known_face_encodings, frame_list)
-
-        # Case 3: (list[np.ndarray],) - Process frames with a pre-trained model
-        elif len(args) == 1 and isinstance(args[0], list):
-            frame_list = args[0]
-            return self.execute_pretrained(frame_list)
-
-
-        # If none of the cases match, raise an exception
-        raise ValueError("Invalid arguments provided to execute. Expected combinations are:"
-                         " (Path, list), (list, list), or (list),")
