@@ -4,6 +4,7 @@ from pathlib import Path
 import click
 from ai.face_recognizer import FaceDetector
 from etl import extract as e
+from etl import load as l
 import utils as u
 
 @click.group()
@@ -80,6 +81,55 @@ def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, fr
     timestamps = face_detector.execute(images_dir, frames, frame_interval=frame_interval)
     u.save_txt(str(timestamps), output_path)
 
+
+@main.command()
+@click.option(
+    "-i",
+    "--images-dir",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Directory with training face images",
+)
+@click.option(
+    "-v",
+    "--video-path",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Path to video to analyze",
+)
+@click.option(
+    "-f",
+    "--frame-interval",
+    required=False,
+    default=10,
+    type=int,
+    help="Frame interval to process. Default is 10 (process every 10th frame)",
+)
+@click.option(
+    "-l",
+    "--clips-length",
+    required=False,
+    default=1800,
+    type=int,
+    help="length of output clips in frames",
+)
+@click.option(
+    "-o",
+    "--output-dir",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Output file",
+)
+@click.pass_context
+def run(ctx: click.core.Context, images_dir: Path, video_path: Path, frame_interval: int, clips_length: int, output_dir: Path):
+    logger = ctx.obj["logger"]
+    logger.info("etracring frames from video")
+    frames = e.extract_frames(video_path)
+    
+    face_detector = FaceDetector()
+    timestamps = face_detector.execute(images_dir, frames, frame_interval=frame_interval)
+    l.post_process(video_path, timestamps, output_dir, clips_length=clips_length)
+    
 
 if __name__ == "__main__":
     main()
