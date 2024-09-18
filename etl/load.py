@@ -61,7 +61,7 @@ def get_frame_ranges(frames_set: set[int], clip_length: int, video_length: int,)
     
     return merged_ranges
 
-def post_process(video_path: Path, frames: set, output_dir: Path, clips_length: int = 1800, extension: str = "MP4") -> None:
+def post_process(video_path: Path, frames: set, output_dir: Path, clips_length: int = 1800) -> None:
     logger.info(f"Starting post processing for video {video_path.stem}")
 
     video_length = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FRAME_COUNT)
@@ -70,7 +70,7 @@ def post_process(video_path: Path, frames: set, output_dir: Path, clips_length: 
     logger.info(f"Saving extracted clips to {output_dir}")
     for range in frame_ranges:
         video_clip = extract_video(video_path, start=range[0], end=range[1])
-        output_path = Path(output_dir) / f"extracted_clip_{i}.{extension}"
+        output_path = Path(output_dir) / f"extracted_clip_{i}.MP4"
         save_video(video_clip, output_path)
         i += 1
-    logger.info(f"Saved {i} clips")
+    logger.info(f"Saved {i-1} clips")
