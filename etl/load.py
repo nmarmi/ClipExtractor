@@ -1,5 +1,11 @@
+import logging
 from pathlib import Path
+
+from utils.io import save_video
+
 from moviepy.video.io.VideoFileClip import VideoFileClip, VideoClip
+
+logger = logging.getLogger()
 
 def extract_video(video_path: Path, start: int, end: int) -> VideoClip:
     """
@@ -23,18 +29,18 @@ def extract_video(video_path: Path, start: int, end: int) -> VideoClip:
     return video_subclip
 
 
-def get_frame_ranges(indices, num_frames=100) -> list[tuple[int, int]]:
+def get_frame_ranges(frames_set: set[int], clip_length: int = 200) -> list[tuple[int, int]]:
     """
-    Get list of (start, end) frame indices from set of frames. Used to later extract videos
+    Get list of (start, end) frame frames_set from set of frames. Used to later extract videos
 
     Args:
-        indices (set[int]): set of frame indices
-        num_frames (int): number of frames before and after detected frame to keep in video
+        frames_set (set[int]): set of frame indices
+        clip_length (int): number of frames per clip
     
     Returns:
         list[tuple[int, int]]: list of (start, end) frame indices
     """
-    ranges = [(max(i - num_frames, 0), i + num_frames) for i in indices]
+    ranges = [(max(i - clip_length/2, 0), i + clip_length/2) for i in frames_set]
     ranges.sort()
 
     # Merge overlapping ranges
@@ -52,3 +58,14 @@ def get_frame_ranges(indices, num_frames=100) -> list[tuple[int, int]]:
     merged_ranges.append((current_start, current_end))
     
     return merged_ranges
+
+def post_process(video_path: Path, frames: set, output_dir: Path, clips_length: int = 200) -> None:
+
+    logger.info(f"Starting post processing for video {video_path.stem}")
+
+    frame_ranges = get_frame_ranges(frames, clip_length=clips_length)
+    i = 1
+    for range in frame_ranges:
+        video_clip = extract_video(video_path, start=range[0], end=range[1])
+        save_video(video_clip, output_dir / f"extracted_clip_{i}")
+        i += 1
