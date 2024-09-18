@@ -3,6 +3,7 @@ from pathlib import Path
 
 from utils.io import save_video
 
+import cv2
 from moviepy.video.io.VideoFileClip import VideoFileClip, VideoClip
 
 logger = logging.getLogger()
@@ -18,7 +19,7 @@ def extract_video(video_path: Path, start: int, end: int) -> VideoClip:
     Returns:
         VideoClip: video object to write in file
     """
-    # Load the video file
+    video_path = str(video_path)
     video = VideoFileClip(video_path)
     fps = video.fps
     
@@ -29,18 +30,19 @@ def extract_video(video_path: Path, start: int, end: int) -> VideoClip:
     return video_subclip
 
 
-def get_frame_ranges(frames_set: set[int], clip_length: int = 200) -> list[tuple[int, int]]:
+def get_frame_ranges(frames_set: set[int], clip_length: int, video_length: int,) -> list[tuple[int, int]]:
     """
     Get list of (start, end) frame frames_set from set of frames. Used to later extract videos
 
     Args:
         frames_set (set[int]): set of frame indices
         clip_length (int): number of frames per clip
+        video_length (int): total number of frames of input video
     
     Returns:
         list[tuple[int, int]]: list of (start, end) frame indices
     """
-    ranges = [(max(i - clip_length/2, 0), i + clip_length/2) for i in frames_set]
+    ranges = [(max(i - clip_length/3, 0), min(i + int(2*clip_length/3), video_length)) for i in frames_set]
     ranges.sort()
 
     # Merge overlapping ranges
@@ -59,13 +61,16 @@ def get_frame_ranges(frames_set: set[int], clip_length: int = 200) -> list[tuple
     
     return merged_ranges
 
-def post_process(video_path: Path, frames: set, output_dir: Path, clips_length: int = 200) -> None:
-
+def post_process(video_path: Path, frames: set, output_dir: Path, clips_length: int = 1800, extension: str = "MP4") -> None:
     logger.info(f"Starting post processing for video {video_path.stem}")
 
-    frame_ranges = get_frame_ranges(frames, clip_length=clips_length)
+    video_length = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FRAME_COUNT)
+    frame_ranges = get_frame_ranges(frames, clips_length, video_length)
     i = 1
+    logger.info(f"Saving extracted clips to {output_dir}")
     for range in frame_ranges:
         video_clip = extract_video(video_path, start=range[0], end=range[1])
-        save_video(video_clip, output_dir / f"extracted_clip_{i}")
+        output_path = Path(output_dir) / f"extracted_clip_{i}.{extension}"
+        save_video(video_clip, output_path)
         i += 1
+    logger.info(f"Saved {i} clips")
