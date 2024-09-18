@@ -54,6 +54,14 @@ def main(
     help="Path to video to analyze",
 )
 @click.option(
+    "-f",
+    "--frame-interval",
+    required=False,
+    default=10,
+    type=int,
+    help="Frame interval to process. Default is 10 (process every 10th frame)",
+)
+@click.option(
     "-o",
     "--output-path",
     required=True,
@@ -61,7 +69,7 @@ def main(
     help="Output file",
 )
 @click.pass_context
-def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, output_path: Path):
+def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, frame_interval: int, output_path: Path):
     #extract logger
     logger = ctx.obj["logger"]
     
@@ -69,7 +77,7 @@ def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, ou
     frames = e.extract_frames(video_path)
     
     face_detector = FaceDetector()
-    timestamps = face_detector.execute(images_dir, frames)
+    timestamps = face_detector.execute(images_dir, frames, frame_interval=frame_interval)
     u.save_txt(str(timestamps), output_path)
 
 
