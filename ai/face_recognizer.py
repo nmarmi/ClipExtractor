@@ -112,7 +112,7 @@ class FaceDetector():
 
 #################################################################
 
-    def execute_with_images(self, train_faces_dir: Path, frame_list: list[np.ndarray], frame_interval: int) -> list[int]:
+    def execute_with_images(self, train_faces_dir: Path, frame_list: list[np.ndarray], frame_interval: int) -> set[int]:
         """
         Train model on faces from images directory, and identify frames with known faces
         Args:
@@ -127,7 +127,7 @@ class FaceDetector():
         return self.get_timestamps(frame_list, frame_interval)
 
 
-    def execute_pretrained(self, frame_list: list[np.ndarray], frame_interval: int) -> list[int]:
+    def execute_pretrained(self, frame_list: list[np.ndarray], frame_interval: int) -> set[int]:
         """
         Execute pipleine with model pretrained on known faces, and identify frames with known faces
         Args:
@@ -144,7 +144,7 @@ class FaceDetector():
             known_face_encodings: list[np.ndarray],
             frame_list: list[np.ndarray],
             frame_interval: int
-        ) -> list[int]:
+        ) -> set[int]:
         """
         Add known face encodings to known faces, and identify frames with known faces
         Args:
@@ -158,7 +158,7 @@ class FaceDetector():
         self.train_from_encodings(known_face_encodings)
         return self.get_timestamps(frame_list, frame_interval)
 
-    def execute(self, *args, **kwargs) -> list[int]:
+    def execute(self, *args, **kwargs) -> set[int]:
         """
         Execute the pipeline based on provided arguments.
         
@@ -171,9 +171,8 @@ class FaceDetector():
             - frame_interval (int): Frames interval to process. Default is 10 (process every 10th frame)
 
         Returns:
-            list[int]: A list of timestamps (frame indices) where known faces were detected.
+            set[int]: A list of timestamps (frame indices) where known faces were detected.
         """
-        logger.info("Starting face detection execution")
         signature = tuple(
             Path if isinstance(arg, (PosixPath, WindowsPath)) else arg.__class__
             for arg in args

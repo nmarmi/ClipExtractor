@@ -1,7 +1,10 @@
 import logging
+
 from pathlib import Path
+from datetime import datetime
 
 from utils.io import save_video
+from utils.process import generate_clip_name
 
 import cv2
 from moviepy.video.io.VideoFileClip import VideoFileClip, VideoClip
@@ -30,18 +33,21 @@ def extract_video(video_path: Path, start: int, end: int) -> VideoClip:
     return video_subclip
 
 
-def get_frame_ranges(frames_set: set[int], clip_length: int, video_length: int,) -> list[tuple[int, int]]:
+def get_frame_ranges(frames_set_list: list[set[int]] | set[int], clip_length: int, video_length: int,) -> list[tuple[int, int]]:
     """
-    Get list of (start, end) frame frames_set from set of frames. Used to later extract videos
+    Get list of (start, end) from list of sets of frames. Used to later extract videos
 
     Args:
-        frames_set (set[int]): set of frame indices
+        frames_set_list (list[set[int]] | set[int]): list of sets or single set of frame indices
         clip_length (int): number of frames per clip
         video_length (int): total number of frames of input video
     
     Returns:
         list[tuple[int, int]]: list of (start, end) frame indices
     """
+    
+    frames_set = set().union(*frames_set_list) if isinstance(frames_set_list, list) else frames_set_list
+    
     ranges = [(max(i - clip_length/3, 0), min(i + int(2*clip_length/3), video_length)) for i in frames_set]
     ranges.sort()
 
@@ -62,13 +68,13 @@ def get_frame_ranges(frames_set: set[int], clip_length: int, video_length: int,)
     return merged_ranges
 
 
-def process_extracted_frames(video_path: Path, frames: set, output_dir: Path, clips_length: int = 1800) -> None:
+def process_extracted_frames(video_path: Path, frames: list[set[int]], output_dir: Path, clips_length: int = 1800) -> None:
     """
     Given detected frames, extract subclips of original video
 
     Args:
         video_path (Path): path to original video
-        frames (set): set of detected frames
+        frames (list[set[int]]): set of detected frames
         output_dir (Path): directory where to save subclips
         clips_length (int): number of frames per extracted subclips
     
@@ -79,11 +85,11 @@ def process_extracted_frames(video_path: Path, frames: set, output_dir: Path, cl
 
     video_length = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FRAME_COUNT)
     frame_ranges = get_frame_ranges(frames, clips_length, video_length)
-    i = 1
+    count = 0
     logger.info(f"Saving extracted clips to {output_dir}")
     for range in frame_ranges:
         video_clip = extract_video(video_path, start=range[0], end=range[1])
-        output_path = Path(output_dir) / f"extracted_clip_{i}.MP4"
+        output_path = Path(output_dir) / f"{generate_clip_name()}.MP4"
         save_video(video_clip, output_path)
-        i += 1
-    logger.info(f"Saved {i-1} clips")
+        count+= 1
+    logger.info(f"Saved {count} clips")
