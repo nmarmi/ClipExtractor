@@ -61,7 +61,20 @@ def get_frame_ranges(frames_set: set[int], clip_length: int, video_length: int,)
     
     return merged_ranges
 
-def post_process(video_path: Path, frames: set, output_dir: Path, clips_length: int = 1800) -> None:
+
+def process_extracted_frames(video_path: Path, frames: set, output_dir: Path, clips_length: int = 1800) -> None:
+    """
+    Given detected frames, extract subclips of original video
+
+    Args:
+        video_path (Path): path to original video
+        frames (set): set of detected frames
+        output_dir (Path): directory where to save subclips
+        clips_length (int): number of frames per extracted subclips
+    
+    Returns:
+        None
+    """
     logger.info(f"Starting post processing for video {video_path.stem}")
 
     video_length = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FRAME_COUNT)

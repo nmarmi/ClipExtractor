@@ -3,8 +3,8 @@ import logging
 from pathlib import Path
 import click
 from ai.face_recognizer import FaceDetector
-from etl import extract as e
-from etl import load as l
+from etl.extract import extract_frames
+from etl.load import process_extracted_frames
 import utils as u
 
 @click.group()
@@ -75,7 +75,7 @@ def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, fr
     logger = ctx.obj["logger"]
     
     logger.info("Starting detect faces")
-    frames = e.extract_frames(video_path)
+    frames = extract_frames(video_path)
     
     face_detector = FaceDetector()
     timestamps = face_detector.execute(images_dir, frames, frame_interval=frame_interval)
@@ -124,11 +124,11 @@ def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, fr
 def run(ctx: click.core.Context, images_dir: Path, video_path: Path, frame_interval: int, clips_length: int, output_dir: Path):
     logger = ctx.obj["logger"]
     logger.info("etracring frames from video")
-    frames = e.extract_frames(video_path)
+    frames = extract_frames(video_path)
     
     face_detector = FaceDetector()
     timestamps = face_detector.execute(images_dir, frames, frame_interval=frame_interval)
-    l.post_process(video_path, timestamps, output_dir, clips_length=clips_length)
+    process_extracted_frames(video_path, timestamps, output_dir, clips_length=clips_length)
     
 
 if __name__ == "__main__":

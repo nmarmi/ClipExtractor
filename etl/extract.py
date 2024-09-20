@@ -2,11 +2,19 @@
 import logging
 from pathlib import Path
 import cv2
+import numpy as np
 
 logger = logging.getLogger()
 
-def extract_frames(video_path: Path):
-    """extract frames from video"""
+def extract_frames(video_path: Path) -> list[np.ndarray]:
+    """Extract frames from video
+    
+    Args:
+        video_path (Path): path of video to process
+
+    Returns:
+        list[np.ndarray]: list of all video's frames
+    """
     # Open the video file
     cap = cv2.VideoCapture(video_path)
 
