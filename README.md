@@ -1,52 +1,64 @@
-# Project Overview
+# Clip Extractor
 
-## Goal:
-The script will:
+Clip Extractor is a project inteded to extract sub clips from a video using face recognition. The script will recognize faces on which it was trained, and extract the clips where those faces appear
 
-•	Load a pre-recorded video.
+## Setup
 
-•	Analyze the video and audio sequentially to identify timestamps where a specific face or set of words are detected
+### System libraries
 
-•	extract and save the relevant video segments.
+some libs are needed as prerequisites:
+- cmake
+- ffmpeg
 
-## Modules and Their Roles
+For example, in MacOS:
+```sh
+$ brew install cmake && brew install ffmpeg
+```
 
-### OpenCV (cv2):
-•	Purpose: To load the video and process frames
+### Python
+#### Configure environment
 
-•	Functionality: Handles frame-by-frame analysis of the video for face recognition.
+Create and activate Python virtual environment:
+```sh
+$ python3 -m venv venv
+$ source venv/bin/activate   # On macOS/Linux
+# or
+$ venv\Scripts\activate      # On Windows
+```
 
-### 2.	Face Recognition (face_recognition):
-•	Purpose: Detects and identifies specific faces within the video frames captured by OpenCV.
+Install the required Python libraries:
+```sh
+$ pip install -r requirements.txt
+```
 
-•	Functionality: This library simplifies the face detection and recognition tasks with pre-trained models.
-
-###	3.	Speech Recognition (SpeechRecognition):
-•	Purpose: Processes the audio track of the video to detect specific words or phrases.
-
-•	Functionality: Converts audio to text and identifies timestamps of target words.
-
-### 3.	MoviePy (moviepy):
-•	Purpose: For handling video processing, such as extracting and saving segments.
-
-•	Functionality: Provides tools for extracting audio from video and saving specific video segments.
-
-## Workflow
+## Workflow (batch)
 
 ### 1.	Video Processing:
-•	Use OpenCV to read each frame of the video.
 
-•	Apply face recognition to detect the target face.
+Process video {batch_size} frames at a time in order to set a limit on the amount of frames stored in memory at once:
 
-•	Record the timestamps where the face is recognized.
+1) Use OpenCV to read the first {batch_size} frames.
+2) Perform face recognition to detetect the target face(s).
+3) Record the frame indices where the face is recognized
+4) Repeat until all video has been processed
 
-### 2.	Audio Processing:
-•	Use MoviePy to extract the audio from the video.
 
-•	Use SpeechRecognition to convert the audio to text.
+### 2.	Extract Relevant Segments:
+1) Use the timestamps from face detection to pinpoint relevant video segments.
+2)	Use MoviePy to extract these segments and save them to the specified directory.
 
-•	Identify and log the timestamps where specific words or phrases are detected.
+Extracted clips will have a standard length of {clips_length} frames. The script will extract {clips_length / 3} frames before the face was detected, and {2*clips_length / 3} frames after the face was detected.
 
-### 3.	Extract Relevant Segments:
-•	Use the timestamps from face and audio detection to pinpoint relevant video segments.
-•	Use MoviePy to extract these segments and save them to the specified directory.
+If a face is detected more than once within the same range of frames, the clips for both detections will be merged
+
+## Usage
+
+python -m cli -l {log_dir} -q {quiet} batch -i {images_dir} -v {video_path} -f {frame_interval} -b {batch_size} -l {clips_length} -o {output_dir}
+
+- log-dir (not required): Directory where to save logs. If None, logs are printed in stdout
+- quiet (not required): if set to True, logging level is set to WARN, default is DEBUG
+- images_dir: Directory with training face images
+- video_path: Path to video to analyze
+- frame_interval (not required): Frame interval to process. Default is 15 (process every 15th frame)
+- clips_length (not reuqired): Length of output clips in frames
+- output_dir: Directory where extracted clips are saved
