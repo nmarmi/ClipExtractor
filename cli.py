@@ -103,9 +103,9 @@ def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, fr
     "-f",
     "--frame-interval",
     required=False,
-    default=10,
+    default=15,
     type=int,
-    help="Frame interval to process. Default is 10 (process every 10th frame)",
+    help="Frame interval to process. Default is 15 (process every 15th frame)",
 )
 @click.option(
     "-l",
@@ -120,7 +120,7 @@ def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, fr
     "--output-dir",
     required=True,
     type=click.Path(exists=True, file_okay=False, path_type=Path),
-    help="Output file",
+    help="Directory where extracted clips are saved",
 )
 @click.pass_context
 def run(ctx: click.core.Context, images_dir: Path, video_path: Path, frame_interval: int, clips_length: int, output_dir: Path):
