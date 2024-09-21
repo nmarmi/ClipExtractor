@@ -31,10 +31,20 @@ Install the required Python libraries:
 $ pip install -r requirements.txt
 ```
 
-## Workflow (batch)
+## Workflow
+### 1. Training FaceDetector
 
-### 1.	Video Processing:
+The script first trains on either a set of images provided in a specified directory, or a list of face encodings provided in a .npy file
 
+Note: The training images should follow standard guidelines for face recognition:
+
+- The face should be clearly visible and occupy a significant portion of the image.
+- The image should be well-lit, avoiding shadows or extreme angles.
+- Avoid images with multiple faces, and ensure the face is in focus.
+
+### 2.	Video Processing:
+
+#### Batch
 Process video {batch_size} frames at a time in order to set a limit on the amount of frames stored in memory at once:
 
 1) Use OpenCV to read the first {batch_size} frames.
@@ -42,14 +52,20 @@ Process video {batch_size} frames at a time in order to set a limit on the amoun
 3) Record the frame indices where the face is recognized
 4) Repeat until all video has been processed
 
+#### Run
+Process video all at once
 
-### 2.	Extract Relevant Segments:
+1) Use OpenCV to read all video's frames.
+2) Perform face recognition to detetect the target face(s).
+3) Record the frame indices where the face is recognized
+
+### 3.	Extract Relevant Segments:
 1) Use the timestamps from face detection to pinpoint relevant video segments.
-2)	Use MoviePy to extract these segments and save them to the specified directory.
+2) Use MoviePy to extract these segments and save them to the specified directory.
 
 Extracted clips will have a standard length of {clips_length} frames. The script will extract {clips_length / 3} frames before the face was detected, and {2*clips_length / 3} frames after the face was detected.
 
-If a face is detected more than once within the same range of frames, the clips for both detections will be merged
+If a face is detected more than once within the same range of frames, the clips for those detections will be merged
 
 ## Usage
 
@@ -58,6 +74,7 @@ python -m cli -l {log_dir} -q {quiet} batch -i {images_dir} -v {video_path} -f {
 - log-dir (not required): Directory where to save logs. If None, logs are printed in stdout
 - quiet (not required): if set to True, logging level is set to WARN, default is DEBUG
 - images_dir: Directory with training face images
+- encogdings_file: Alternative to images_dir, .npy file that stores face encodings
 - video_path: Path to video to analyze
 - frame_interval (not required): Frame interval to process. Default is 15 (process every 15th frame)
 - clips_length (not reuqired): Length of output clips in frames

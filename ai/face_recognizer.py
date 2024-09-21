@@ -5,6 +5,8 @@ from pathlib import Path, PosixPath, WindowsPath
 import face_recognition
 import numpy as np
 
+import utils as u
+
 logger = logging.getLogger()
 
 class NoKnownFaceEncodingsError(Exception):
@@ -80,9 +82,9 @@ class FaceDetector():
             raise NoKnownFaceEncodingsError()
 
         matches = face_recognition.compare_faces(self.known_faces, detected_face_encoding)
-
+        
         for match in matches:
-            if any(match):
+            if np.any(match):
                 return True
         return False
 

@@ -81,6 +81,7 @@ def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, fr
     
     face_detector = FaceDetector()
     timestamps = face_detector.execute(images_dir, frames, frame_interval=frame_interval)
+    timestamps = sorted(timestamps)
     u.save_txt(str(timestamps), output_path)
 
 
@@ -91,6 +92,44 @@ def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, fr
     required=True,
     type=click.Path(exists=True, file_okay=False, path_type=Path),
     help="Directory with training face images",
+)
+@click.option(
+    "-o",
+    "--output-path",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Output file",
+)
+@click.pass_context
+def generate_encodings(ctx: click.core.Context, images_dir: Path, output_path: Path):
+    #extract logger
+    logger = ctx.obj["logger"]
+    
+    # validation steps
+    # TODO validare images dir and output path exist
+    # TODO validate output oath is .npy type
+
+    logger.info("Starting generate encodings")
+    face_detector = FaceDetector()
+    face_detector.train_from_images(images_dir)
+    encodings = face_detector.get_known_faces()
+    u.save_encodings(encodings, output_path)
+
+
+@main.command()
+@click.option(
+    "-i",
+    "--images-dir",
+    required=False,  # Not required if encodings-file is provided
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Directory with training face images",
+)
+@click.option(
+    "-e",
+    "--encodings-file",
+    required=False,  # Not required if images-dir is provided
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="File with pre-saved face encodings",
 )
 @click.option(
     "-v",
@@ -123,13 +162,36 @@ def detect_faces(ctx: click.core.Context, images_dir: Path, video_path: Path, fr
     help="Directory where extracted clips are saved",
 )
 @click.pass_context
-def run(ctx: click.core.Context, images_dir: Path, video_path: Path, frame_interval: int, clips_length: int, output_dir: Path):
+def run(
+    ctx: click.core.Context,
+    images_dir: Path,
+    encodings_file: Path,
+    video_path: Path,
+    frame_interval: int,
+    clips_length: int,
+    output_dir: Path
+):
     logger = ctx.obj["logger"]
-    logger.info("etracring frames from video")
+    
+    if not images_dir and not encodings_file:
+        logger.fatal("No source of encodings provided")
+        raise click.UsageError("You must provide either --images-dir or --encodings-file.")
+    
+    # TODO validate encodings file is numpy type .npy OR validate images_dir exists
+    # TODO validate video_path exists
+    # TODO validate output_dir esxists
+
+    logger.info("Extracting frames from video")
     frames = extract_frames(video_path)
     
     face_detector = FaceDetector()
-    timestamps = face_detector.execute(images_dir, frames, frame_interval=frame_interval)
+    if encodings_file:
+        encodings = u.load_encodings(encodings_file)
+        face_detector.train_from_encodings(encodings)
+    else:
+        face_detector.train_from_images(images_dir)
+
+    timestamps = face_detector.execute(frames, frame_interval=frame_interval)
     process_extracted_frames(video_path, timestamps, output_dir, clips_length=clips_length)
 
 
@@ -137,9 +199,16 @@ def run(ctx: click.core.Context, images_dir: Path, video_path: Path, frame_inter
 @click.option(
     "-i",
     "--images-dir",
-    required=True,
+    required=False,  # Not required if encodings-file is provided
     type=click.Path(exists=True, file_okay=False, path_type=Path),
     help="Directory with training face images",
+)
+@click.option(
+    "-e",
+    "--encodings-file",
+    required=False,  # Not required if images-dir is provided
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="File with pre-saved face encodings",
 )
 @click.option(
     "-v",
@@ -180,19 +249,39 @@ def run(ctx: click.core.Context, images_dir: Path, video_path: Path, frame_inter
     help="Output file",
 )
 @click.pass_context
-def batch(ctx: click.core.Context, images_dir: Path, video_path: Path, frame_interval: int, batch_size: int, clips_length: int, output_dir: Path):
+def batch(
+    ctx: click.core.Context,
+    images_dir: Path,
+    encodings_file: Path,
+    video_path: Path,
+    frame_interval: int,
+    batch_size: int,
+    clips_length: int,
+    output_dir: Path
+):
     logger = ctx.obj["logger"]
-    logger.info("Extracting frames from video")
     
-    # TODO implement validation steps (is dir, ecc.)
-    # ...
+    # validation steps
 
+    if not images_dir and not encodings_file:
+        logger.fatal("No source of encodings provided")
+        raise click.UsageError("You must provide either --images-dir or --encodings-file.")
+    
+    # TODO validate encodings file is numpy type .npy OR validate images_dir exists
+    # TODO validate video_path exists
+    # TODO validate output_dir esxists
+
+    logger.info("Extracting frames from video")
     current_frame = 0
     total_frames = get_total_frames(video_path)
-    logger.info(f"Total frames in video: {total_frames}")
+    logger.debug(f"Total frames in video: {total_frames}")
     #initialize face detector
     face_detector = FaceDetector()
-    face_detector.train_from_images(images_dir)
+    if encodings_file:
+        encodings = u.load_encodings(encodings_file)
+        face_detector.train_from_encodings(encodings)
+    else:
+        face_detector.train_from_images(images_dir)
 
     timestamp_lists = []
     batch_count = 1
