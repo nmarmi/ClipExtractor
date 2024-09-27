@@ -179,10 +179,7 @@ def run(
 ):
     logger = ctx.obj["logger"]
     
-    if not images_dir and not encodings_file:
-        logger.fatal("No source of encodings provided")
-        raise click.UsageError("You must provide either --images-dir or --encodings-file.")
-    
+    # validation steps
     u.validate_encodings_source(images_dir, encodings_file)
 
     if not Path(video_path).exists:
@@ -275,7 +272,6 @@ def batch(
     logger = ctx.obj["logger"]
     
     # validation steps
-
     u.validate_encodings_source(images_dir, encodings_file)
     
     if not Path(video_path).exists:
