@@ -2,6 +2,7 @@
 import logging
 from pathlib import Path
 import click
+import os
 
 from ai.face_recognizer import FaceDetector
 from etl.extract import extract_frames, extract_batch_frames, get_total_frames
@@ -106,8 +107,13 @@ def generate_encodings(ctx: click.core.Context, images_dir: Path, output_path: P
     logger = ctx.obj["logger"]
     
     # validation steps
-    # TODO validare images dir and output path exist
-    # TODO validate output oath is .npy type
+    if not os.path.isdir(images_dir):
+            logger.critical(f"Images folder {images_dir} not found")
+            return
+    
+    if not u.has_right_extension(output_path, ext=".npy"):
+            logger.critical(f"Encodings file must be .npy - found: {output_path}")
+            return
 
     logger.info("Starting generate encodings")
     face_detector = FaceDetector()
@@ -177,9 +183,13 @@ def run(
         logger.fatal("No source of encodings provided")
         raise click.UsageError("You must provide either --images-dir or --encodings-file.")
     
-    # TODO validate encodings file is numpy type .npy OR validate images_dir exists
-    # TODO validate video_path exists
-    # TODO validate output_dir esxists
+    u.validate_encodings_source(images_dir, encodings_file)
+
+    if not Path(video_path).exists:
+        logger.critical(f"Input video {video_path} not found")
+
+    if not os.path.isdir(output_dir):
+        logger.critical(f"Output folder {output_dir} not found")
 
     logger.info("Extracting frames from video")
     frames = extract_frames(video_path)
@@ -190,6 +200,9 @@ def run(
         face_detector.train_from_encodings(encodings)
     else:
         face_detector.train_from_images(images_dir)
+    
+    if len(face_detector.get_known_faces()) == 0:
+        raise ValueError("No face encodings found")
 
     timestamps = face_detector.execute(frames, frame_interval=frame_interval)
     process_extracted_frames(video_path, timestamps, output_dir, clips_length=clips_length)
@@ -263,13 +276,14 @@ def batch(
     
     # validation steps
 
-    if not images_dir and not encodings_file:
-        logger.fatal("No source of encodings provided")
-        raise click.UsageError("You must provide either --images-dir or --encodings-file.")
+    u.validate_encodings_source(images_dir, encodings_file)
     
-    # TODO validate encodings file is numpy type .npy OR validate images_dir exists
-    # TODO validate video_path exists
-    # TODO validate output_dir esxists
+    if not Path(video_path).exists:
+        logger.critical(f"Input video {video_path} not found")
+
+    if not os.path.isdir(output_dir):
+        logger.critical(f"Output folder {output_dir} not found")
+    
 
     logger.info("Extracting frames from video")
     current_frame = 0

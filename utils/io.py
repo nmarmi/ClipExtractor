@@ -9,6 +9,7 @@ from moviepy.video.io.VideoFileClip import VideoClip
 logger = logging.getLogger()
 
 def load_encodings(encodings_file_path: Path) -> list[np.ndarray]:
+    logger.info(f"Reading encodings from {encodings_file_path}")
     with open(encodings_file_path, "rb") as f:
         known_face_encodings = np.load(f)
     return known_face_encodings

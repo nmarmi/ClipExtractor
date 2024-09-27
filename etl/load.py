@@ -1,10 +1,9 @@
 import logging
 
 from pathlib import Path
-from datetime import datetime
 
 from utils.io import save_video
-from utils.process import generate_clip_name
+from utils.process import get_datetime, merge_overlapping_ranges
 
 import cv2
 from moviepy.video.io.VideoFileClip import VideoFileClip, VideoClip
@@ -51,19 +50,7 @@ def get_frame_ranges(frames_set_list: list[set[int]] | set[int], clip_length: in
     ranges = [(max(i - clip_length/3, 0), min(i + int(2*clip_length/3), video_length)) for i in frames_set]
     ranges.sort()
 
-    # Merge overlapping ranges
-    merged_ranges = []
-    current_start, current_end = ranges[0]
-
-    for start, end in ranges[1:]:
-        if start <= current_end:  # Overlap
-            current_end = max(current_end, end)
-        else:
-            merged_ranges.append((current_start, current_end))
-            current_start, current_end = start, end
-
-    # Append the last merged range
-    merged_ranges.append((current_start, current_end))
+    merged_ranges = merge_overlapping_ranges(ranges)
     
     return merged_ranges
 
@@ -89,7 +76,7 @@ def process_extracted_frames(video_path: Path, frames: list[set[int]], output_di
     logger.info(f"Saving extracted clips to {output_dir}")
     for range in frame_ranges:
         video_clip = extract_video(video_path, start=range[0], end=range[1])
-        output_path = Path(output_dir) / f"{generate_clip_name()}.MP4"
+        output_path = Path(output_dir) / f"{get_datetime()}.MP4"
         save_video(video_clip, output_path)
         count+= 1
     logger.info(f"Saved {count} clips")

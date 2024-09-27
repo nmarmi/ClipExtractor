@@ -41,14 +41,18 @@ class FaceDetector():
 
         # Loop through each image file in the specified directory
         for filename in os.listdir(faces_dir):
-            if filename.endswith(".jpg") or filename.endswith(".png"):
-                # Load the image file
-                image_path = os.path.join(faces_dir, filename)
-                image = face_recognition.load_image_file(image_path)
-                encodings = face_recognition.face_encodings(image)
+            # Load the image file
+            image_path = Path(os.path.join(faces_dir, filename))
+            
+            if not u.is_image_file(image_path):
+                continue
+            
+            image = face_recognition.load_image_file(image_path)
+            encodings = face_recognition.face_encodings(image)
 
-                if encodings:
-                    self.known_faces.append(encodings)
+            if encodings:
+                self.known_faces.append(encodings)
+            
         logger.info(f"Extracted {len(self.known_faces) - init_encodings} encodings from {faces_dir}")
 
     def get_known_faces(self):
